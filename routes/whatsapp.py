@@ -1,7 +1,18 @@
+from fastapi import APIRouter
+from services.whatsapp_service import process_whatsapp_reply
+from fastapi.responses import JSONResponse
+
+router = APIRouter()
+
 @router.post("/whatsapp/message")
-async def whatsapp_message_handler(message: str):
+async def receive_whatsapp_message(data: dict):
     """
-    Endpoint per processare i messaggi WhatsApp.
+    Riceve un messaggio da WhatsApp.
     """
-    response = process_whatsapp_message(message)
-    return {"response": response}
+    phone_number = data.get("from")
+    message = data.get("text")
+    
+    if phone_number and message:
+        process_whatsapp_reply(phone_number, message)
+        return JSONResponse(content={"message": "Messaggio elaborato."})
+    return JSONResponse(content={"error": "Dati mancanti."}, status_code=400)

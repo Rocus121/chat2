@@ -1,22 +1,45 @@
-from services.calendar_service import get_available_slots, add_appointment
+import requests
 
-def process_whatsapp_message(message: str) -> str:
+# Simulazione database locale (JSON)
+DATABASE = {}
+
+def send_whatsapp_message(phone_number: str, message: str) -> bool:
     """
-    Processa i messaggi WhatsApp per verificare disponibilità appuntamenti.
+    Invia un messaggio WhatsApp.
     """
     try:
-        # Esempio di messaggio: "Appuntamento 2024-06-20 14:00"
-        if message.startswith("Appuntamento"):
-            _, date, time = message.split()
-            available = get_available_slots(date, time)
-            
-            if available:
-                add_appointment(date, time, status='booked')
-                return f"✅ Appuntamento confermato per il {date} alle {time}."
-            else:
-                return f"❌ L'orario {time} del {date} non è disponibile. Scegli un altro orario."
-        
-        return "⚠️ Messaggio non riconosciuto. Scrivi 'Appuntamento AAAA-MM-GG HH:MM'"
-    
-    except Exception as e:
-        return f"Errore nella gestione del messaggio: {str(e)}"
+        response = requests.post(
+            "https://graph.facebook.com/v17.0/YOUR_PHONE_ID/messages",
+            headers={
+                "Authorization": "Bearer YOUR_ACCESS_TOKEN",
+                "Content-Type": "application/json"
+            },
+            json={
+                "messaging_product": "whatsapp",
+                "to": phone_number,
+                "type": "text",
+                "text": {"body": message}
+            }
+        )
+        return response.status_code == 200
+    except requests.exceptions.RequestException as e:
+        print(f"Errore WhatsApp: {e}")
+        return False
+
+def process_whatsapp_reply(phone_number: str, message: str):
+    """
+    Elabora la risposta dell'utente su WhatsApp.
+    """
+    if phone_number in DATABASE and DATABASE[phone_number]["status"] == "pending":
+        if message.strip().lower() == "ok":
+            DATABASE[phone_number]["status"] = "confirmed"
+            send_whatsapp_message(phone_number, "Conferma ricevuta. Il tuo numero è attivo per le prenotazioni.")
+
+
+from services.calendar_service import check_availability
+
+def process_whatsapp_reply(phone_number: str, message: str):
+    if phone_number in DATABASE:
+        if DATABASE[phone_number]["status"] == "confirmed":
+            response = check_availability(phone_number)
+            send_whatsapp_message(phone_number, response)

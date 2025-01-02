@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from fastapi import FastAPI
 import uvicorn  
-from routes import whatsapp, appuntamenti
+from routes import whatsapp, appuntamenti, register
 
 # Istanza principale di FastAPI
 app = FastAPI()
@@ -16,9 +16,12 @@ app = FastAPI()
 async def read_root():
     return {"message": "Ciao, il tuo chatbot è pronto!"}
 
-# Includere le route
-app.include_router(appuntamenti.router)
+
+
 app.include_router(whatsapp.router)
+app.include_router(appuntamenti.router)
+app.include_router(register.router)
+
 
 # Avvia il server solo se il file viene eseguito direttamente
 if __name__ == "__main__":
